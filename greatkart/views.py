@@ -2,10 +2,15 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from store_app.models import Product
 
-def home(request):
-    product = Product.objects.all().filter(is_available=True)
+from django.views.generic import View
 
-    context = {
+class Home(View):
+    template_name = "home.html"
+    
+    def get(self,request):
+        product = Product.objects.all().filter(is_available=True)
+        context = {
         'products': product,
-    }
-    return render(request, 'home.html', context)
+        }
+        return render(request, self.template_name , context)
+
