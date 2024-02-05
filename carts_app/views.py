@@ -1,8 +1,11 @@
 from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.exceptions import ObjectDoesNotExist
+from django.views.generic import View
+
 from store_app.models import Product, Variation
 from .models import Cart, CartItem
-from django.core.exceptions import ObjectDoesNotExist
+
 
 from django.contrib.auth.decorators import login_required
 # Create your views here.
@@ -14,6 +17,11 @@ def _card_id(request):
     if not cart:
         cart = request.session.create()
     return cart
+
+
+
+
+
 
 # add perticular item to card 
 def add_cart(request, product_id):
@@ -45,7 +53,7 @@ def add_cart(request, product_id):
 
 
 
-# check cart item exits or not then add 
+    # check cart item exits or not then add 
     is_cart_item_exists = CartItem.objects.filter(product=product, cart=cart).exists()
     if is_cart_item_exists:
         cart_item = CartItem.objects.filter(product=product, cart=cart)  # return card items object
@@ -102,30 +110,59 @@ def add_cart(request, product_id):
 
 
 # decrement items
-def remove_cart(request, product_id, cart_item_id):
-    cart = Cart.objects.get(cart_id = _card_id(request))
-    product = get_object_or_404(Product, id=product_id)
-    try:
-        cart_item = CartItem.objects.get(product=product, cart=cart, id=cart_item_id)
-        if cart_item.quantity > 1:
-            cart_item.quantity -= 1
-            cart_item.save()
-        else:
-            cart_item.delete()
-    except: 
-        pass
-    return redirect('cart')
+class Remove_cart(View):
+    def get(self,request, product_id, cart_item_id):
+        cart = Cart.objects.get(cart_id = _card_id(request))
+        product = get_object_or_404(Product, id=product_id)
+        try:
+            cart_item = CartItem.objects.get(product=product, cart=cart, id=cart_item_id)
+            if cart_item.quantity > 1:
+                cart_item.quantity -= 1
+                cart_item.save()
+            else:
+                cart_item.delete()
+        except: 
+            pass
+        return redirect('cart')
+
 
 
 # remove holl card perticuar
-def remove_cart_item(request, product_id, cart_item_id ):
-    cart = Cart.objects.get(cart_id = _card_id(request))
-    product = get_object_or_404(Product, id=product_id)
-    cart_item = CartItem.objects.get(product=product, cart=cart, id=cart_item_id)
-    cart_item.delete()
-    return redirect('cart')
+class Remove_cart_item(View):
+    def get(self,request, product_id, cart_item_id):
+        cart = Cart.objects.get(cart_id = _card_id(request))
+        product = get_object_or_404(Product, id=product_id)
+        cart_item = CartItem.objects.get(product=product, cart=cart, id=cart_item_id)
+        cart_item.delete()
+        return redirect('cart')
 
 
+# class Cart(View):
+#     template_name = "store/cart.html"
+#     def get(self,request, total=0, quantity=0, cart_items=None):
+#         try:
+#             tax=0
+#             grand_total=0
+#             cart = Cart.objects.get(cart_id=_card_id(request))
+#             cart_items = CartItem.objects.filter(cart=cart, is_active=True)
+#             for cart_item in cart_items:
+#                 total += (cart_item.product.price * cart_item.quantity)
+#                 quantity += cart_item.quantity
+#             tax = (2 * total)/100
+#             grand_total = total + tax
+
+
+#         except ObjectDoesNotExist:
+#             pass
+
+#         context = {
+#             'total' : total,
+#             'quantity': quantity,
+#             'cart_items': cart_items,
+#             'tax'       : tax,
+#             'grand_total': grand_total,
+#         } 
+#         return render(request, self.template_name, context)
 
 
 
