@@ -1,9 +1,11 @@
 from django.shortcuts import render, redirect
-from .forms import RegistrationForm
-from .models import Account
+
 from django.contrib import messages, auth 
-from django.contrib.auth.decorators import login_required
+
 from django.http import HttpResponse
+from django.views.generic import View
+
+
 
 # Verification email
 from django.contrib.sites.shortcuts import get_current_site
@@ -13,11 +15,22 @@ from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import EmailMessage
 
+from .forms import RegistrationForm
+from .models import Account
+
 
 # Create your views here.
-def register(request):
+class Register(View):
+    template_name = "accounts/register.html"
 
-    if request.method == 'POST':
+    def get(self,request):
+        form = RegistrationForm()
+        context = {
+            'form' : form,
+        }
+        return render(request, self.template_name, context)
+    
+    def post(self,request):
         form = RegistrationForm(request.POST) #request.post will contain all the field values
         if form.is_valid():
             # geting all the fields values
@@ -49,21 +62,21 @@ def register(request):
             # redirect to this path it will be in google url search bar
             return redirect('/accounts/login/?command=verification&email='+email)
 
-    else:
-        form = RegistrationForm()
-    context = {
-        'form' : form,
-    }
-    return render(request, 'accounts/register.html', context)
 
 
-def login(request):
-    if request.method == 'POST':
+class Login(View):
+
+    template_name = "accounts/login.html"
+    def get(self,request):
+        return render(request, self.template_name)
+
+    def post(self,request):
+        
         email = request.POST['email']
         password = request.POST['password']
 
         user = auth.authenticate(email=email, password=password)
-        
+    
 
         if user is not None:
             auth.login(request, user)
@@ -72,46 +85,47 @@ def login(request):
         else:
             messages.error(request, 'Invalid login credentials')
             return redirect('login')
-        
-    return render(request, 'accounts/login.html')
+     
 
+class Logout(View):
+    def get(self,request):
+        auth.logout(request)
+        messages.success(request, 'You are logged out.')
+        return redirect('login')
 
-
-@login_required(login_url = 'login')
-def logout(request):
-    auth.logout(request)
-    messages.success(request, 'You are logged out.')
-    return redirect('login')
 
 # after clicking on mail link then is_active = true 
-def activate(request, uidb64, token):
-    try:
-        uid = urlsafe_base64_decode(uidb64).decode()
-        user = Account._default_manager.get(pk=uid)
-    except(TypeError, ValueError, OverflowError, Account.DoesNotExist):
-        user = None
-    
-    if user is not None and default_token_generator.check_token(user, token):
-        user.is_active = True
-        user.save()
-        messages.success(request, 'Congratulations! your account is activated.')
-        return redirect('login')
-    else:
-        messages.error(request, 'Invalid activation link')
-        return redirect('register')
-    
+class Activate(View):
+    def get(self,request, uidb64, token):
+        try:
+            uid = urlsafe_base64_decode(uidb64).decode()
+            user = Account._default_manager.get(pk=uid)
+        except(TypeError, ValueError, OverflowError, Account.DoesNotExist):
+            user = None
+        
+        if user is not None and default_token_generator.check_token(user, token):
+            user.is_active = True
+            user.save()
+            messages.success(request, 'Congratulations! your account is activated.')
+            return redirect('login')
+        else:
+            messages.error(request, 'Invalid activation link')
+            return redirect('register')
 
-@login_required(login_url = 'login')
-def dashboard(request):
-    return render(request, 'accounts/dashboard.html')
-
-
-
+class Dashboard(View):
+    template_name = "accounts/dashboard.html"
+    def get(self,request):
+        return render(request, self.template_name)
 
 
 
-def forgotPassword(request):
-    if request.method == 'POST':
+class ForgotPassword(View):
+    template_name = "accounts/forgotPassword.html"
+
+    def get(self, request):
+        return render(request, self.template_name)
+
+    def post(self, request):
         email = request.POST['email']
         if Account.objects.filter(email=email).exists():
             user = Account.objects.get(email__exact=email)
@@ -134,29 +148,36 @@ def forgotPassword(request):
         else:
             messages.error(request, 'Account does not exist!')
             return redirect('forgotPassword')
-    return render(request, 'accounts/forgotPassword.html')
+
+
 
 # after clicking on mail link of forgotPassword
-def resetpassword_validate(request,uidb64, token):
-    try:
-        uid = urlsafe_base64_decode(uidb64).decode()
-        user = Account._default_manager.get(pk=uid)
-    except(TypeError, ValueError, OverflowError, Account.DoesNotExist):
-        user = None
+class Resetpassword_validate(View):
+    def get(self,request,uidb64, token):
+        try:
+            uid = urlsafe_base64_decode(uidb64).decode()
+            user = Account._default_manager.get(pk=uid)
+        except(TypeError, ValueError, OverflowError, Account.DoesNotExist):
+            user = None
 
-    if user is not None and default_token_generator.check_token(user, token):
+        if user is not None and default_token_generator.check_token(user, token):
         # saving uid in session
-        request.session['uid'] = uid
-        messages.success(request, 'Please reset your password')
-        return redirect('resetPassword')
-    else:
-        messages.error(request, 'This link has been expired!')
-        return redirect('login')
+            request.session['uid'] = uid
+            messages.success(request, 'Please reset your password')
+            return redirect('resetPassword')
+        else:
+            messages.error(request, 'This link has been expired!')
+            return redirect('login')
 
 
 
-def resetPassword(request):
-    if request.method == 'POST':
+class ResetPassword(View):
+    template_name = "accounts/resetPassword.html"
+
+    def get(self,request):
+        return render(request, self.template_name)
+    
+    def post(self,request):
         password = request.POST['password']
         confirm_password = request.POST['confirm_password']
 
@@ -172,6 +193,3 @@ def resetPassword(request):
         else:
             messages.error(request, 'Password do not match!')
             return redirect('resetPassword')
-    else:
-        return render(request, 'accounts/resetPassword.html')
-

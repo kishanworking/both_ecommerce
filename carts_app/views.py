@@ -6,8 +6,6 @@ from django.views.generic import View
 from store_app.models import Product, Variation
 from .models import Cart, CartItem
 
-
-from django.contrib.auth.decorators import login_required
 # Create your views here.
 
 # put product without login also in card sections
@@ -69,7 +67,6 @@ def add_cart(request, product_id):
             ex_var_list.append(list(existing_variation))
             id.append(item.id)
 
-        print(ex_var_list)
 
         if product_variation in ex_var_list:
             # increase the cart item quantity
@@ -136,89 +133,58 @@ class Remove_cart_item(View):
         cart_item.delete()
         return redirect('cart')
 
+class Cartt(View):
+    template_name = "store/cart.html"
+    def get(self,request, total=0, quantity=0, cart_items=None):
+        try:
+            tax=0
+            grand_total=0
+            cart = Cart.objects.get(cart_id=_card_id(request))
+            cart_items = CartItem.objects.filter(cart=cart, is_active=True)
+            for cart_item in cart_items:
+                total += (cart_item.product.price * cart_item.quantity)
+                quantity += cart_item.quantity
+            tax = (2 * total)/100
+            grand_total = total + tax
 
-# class Cart(View):
-#     template_name = "store/cart.html"
-#     def get(self,request, total=0, quantity=0, cart_items=None):
-#         try:
-#             tax=0
-#             grand_total=0
-#             cart = Cart.objects.get(cart_id=_card_id(request))
-#             cart_items = CartItem.objects.filter(cart=cart, is_active=True)
-#             for cart_item in cart_items:
-#                 total += (cart_item.product.price * cart_item.quantity)
-#                 quantity += cart_item.quantity
-#             tax = (2 * total)/100
-#             grand_total = total + tax
+        except ObjectDoesNotExist:
+            pass
 
-
-#         except ObjectDoesNotExist:
-#             pass
-
-#         context = {
-#             'total' : total,
-#             'quantity': quantity,
-#             'cart_items': cart_items,
-#             'tax'       : tax,
-#             'grand_total': grand_total,
-#         } 
-#         return render(request, self.template_name, context)
-
-
-
-
-
-def cart(request, total=0, quantity=0, cart_items=None):
-    try:
-        tax=0
-        grand_total=0
-        cart = Cart.objects.get(cart_id=_card_id(request))
-        cart_items = CartItem.objects.filter(cart=cart, is_active=True)
-        for cart_item in cart_items:
-            total += (cart_item.product.price * cart_item.quantity)
-            quantity += cart_item.quantity
-        tax = (2 * total)/100
-        grand_total = total + tax
-
-
-    except ObjectDoesNotExist:
-        pass
-
-    context = {
-        'total' : total,
-        'quantity': quantity,
-        'cart_items': cart_items,
-        'tax'       : tax,
-        'grand_total': grand_total,
-    } 
-    return render(request, 'store/cart.html', context)
-
+        context = {
+            'total' : total,
+            'quantity': quantity,
+            'cart_items': cart_items,
+            'tax'       : tax,
+            'grand_total': grand_total,
+        } 
+        return render(request, self.template_name, context)
 
 
 
 # creating checkout page 
-@login_required(login_url='login')
-def checkout(request, total=0, quantity=0, cart_items=None):
-    try:
-        tax=0
-        grand_total=0
-        cart = Cart.objects.get(cart_id=_card_id(request))
-        cart_items = CartItem.objects.filter(cart=cart, is_active=True)
-        for cart_item in cart_items:
-            total += (cart_item.product.price * cart_item.quantity)
-            quantity += cart_item.quantity
-        tax = (2 * total)/100
-        grand_total = total + tax
+class Checkout(View):
+    template_name = "store/checkout.html"
+    def get(self,request, total=0, quantity=0, cart_items=None):
+        try:
+            tax=0
+            grand_total=0
+            cart = Cart.objects.get(cart_id=_card_id(request))
+            cart_items = CartItem.objects.filter(cart=cart, is_active=True)
+            for cart_item in cart_items:
+                total += (cart_item.product.price * cart_item.quantity)
+                quantity += cart_item.quantity
+            tax = (2 * total)/100
+            grand_total = total + tax
 
 
-    except ObjectDoesNotExist:
-        pass
+        except ObjectDoesNotExist:
+            pass
 
-    context = {
-        'total' : total,
-        'quantity': quantity,
-        'cart_items': cart_items,
-        'tax'       : tax,
-        'grand_total': grand_total,
-    } 
-    return render(request, 'store/checkout.html', context)
+        context = {
+            'total' : total,
+            'quantity': quantity,
+            'cart_items': cart_items,
+            'tax'       : tax,
+            'grand_total': grand_total,
+        } 
+        return render(request, self.template_name, context)
