@@ -110,19 +110,6 @@ def register(request):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 class Login(View):
 
     template_name = "accounts/login.html"

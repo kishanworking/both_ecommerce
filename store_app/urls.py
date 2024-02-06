@@ -4,6 +4,8 @@ from django.contrib.auth.decorators import login_required
 
 from . import views 
 
+
+
 urlpatterns = [
     
     path('', views.Store.as_view(), name="store"),

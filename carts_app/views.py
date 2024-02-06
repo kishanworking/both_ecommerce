@@ -18,14 +18,15 @@ def _card_id(request):
 
 
 
-
-
-
 # add perticular item to card 
-def add_cart(request, product_id):
-    product = Product.objects.get(id=product_id)  #get the product
-    product_variation = []
-    if request.method == 'POST':
+class Add_cart(View):
+
+    def get(self,request):
+        return redirect('cart')
+
+    def post(self,request,product_id):
+        product = Product.objects.get(id=product_id)  #get the product
+        product_variation = []
         # for geting size and color of product from url
         for item in request.POST:
             key = item 
@@ -39,69 +40,63 @@ def add_cart(request, product_id):
             except:
                 pass
         # size = request.GET['size']
-        
-    
-    try:
-        cart = Cart.objects.get(cart_id=_card_id(request)) #get the cart using the cart_id present in the session
-    except Cart.DoesNotExist:
-        cart = Cart.objects.create(
-            cart_id = _card_id(request)
-        )
-    cart.save()
+        try:
+            cart = Cart.objects.get(cart_id=_card_id(request)) #get the cart using the cart_id present in the session
+        except Cart.DoesNotExist:
+            cart = Cart.objects.create(
+                cart_id = _card_id(request)
+            )
+        cart.save()
+
+        # check cart item exits or not then add 
+        is_cart_item_exists = CartItem.objects.filter(product=product, cart=cart).exists()
+        if is_cart_item_exists:
+            cart_item = CartItem.objects.filter(product=product, cart=cart)  # return card items object
+            # existting_variations -> database
+            # current variation  -> product_variation
+            # item_id    -> database
+
+            ex_var_list = []
+            id = []
+
+            for item in cart_item:
+                existing_variation = item.variations.all()
+                ex_var_list.append(list(existing_variation))
+                id.append(item.id)
 
 
+            if product_variation in ex_var_list:
+                # increase the cart item quantity
+                index = ex_var_list.index(product_variation)
+                item_id = id[index]
+                item = CartItem.objects.get(product=product, id=item_id)
+                item.quantity += 1
+                item.save()
 
-    # check cart item exits or not then add 
-    is_cart_item_exists = CartItem.objects.filter(product=product, cart=cart).exists()
-    if is_cart_item_exists:
-        cart_item = CartItem.objects.filter(product=product, cart=cart)  # return card items object
-        # existting_variations -> database
-        # current variation  -> product_variation
-        # item_id    -> database
+            else:
+                # create a new cart item
+                # --------variation card select 
 
-        ex_var_list = []
-        id = []
+                item = CartItem.objects.create(product=product, quantity=1, cart=cart)
 
-        for item in cart_item:
-            existing_variation = item.variations.all()
-            ex_var_list.append(list(existing_variation))
-            id.append(item.id)
-
-
-        if product_variation in ex_var_list:
-            # increase the cart item quantity
-            index = ex_var_list.index(product_variation)
-            item_id = id[index]
-            item = CartItem.objects.get(product=product, id=item_id)
-            item.quantity += 1
-            item.save()
-
+                if len(product_variation) > 0:
+                    item.variations.clear() #each time new color and size will be taken
+                    item.variations.add(*product_variation)
+                item.save()
         else:
-            # create a new cart item
+            cart_item = CartItem.objects.create(
+                product = product,
+                quantity = 1,
+                cart = cart,
+            )  
             # --------variation card select 
-
-            item = CartItem.objects.create(product=product, quantity=1, cart=cart)
-
             if len(product_variation) > 0:
-                item.variations.clear() #each time new color and size will be taken
-                item.variations.add(*product_variation)
-            item.save()
-    else:
-        cart_item = CartItem.objects.create(
-            product = product,
-            quantity = 1,
-            cart = cart,
-        )  
-        # --------variation card select 
-        if len(product_variation) > 0:
-            cart_item.variations.clear()
-            cart_item.variations.add(*product_variation)
-        cart_item.save()
-    # return HttpResponse(cart_item.product)
-    # exit()
-    return redirect('cart')
-
-
+                cart_item.variations.clear()
+                cart_item.variations.add(*product_variation)
+            cart_item.save()
+        return redirect('cart')
+        # return HttpResponse(cart_item.product)
+        # exit()
 
 
 
